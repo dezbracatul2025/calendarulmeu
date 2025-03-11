@@ -115,7 +115,7 @@
         };
         const hours = ["10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00"];
         const calendarDiv = document.getElementById("calendar");
-        let bookings = {};
+        let bookings = JSON.parse(localStorage.getItem('bookings')) || {};
         let today = new Date();
 
         // Conectare la serverul WebSocket (folosind adresa ta Glitch)
@@ -129,6 +129,7 @@
             const message = JSON.parse(event.data);
             if (message.type === 'init' || message.type === 'update') {
                 bookings = message.data;
+                localStorage.setItem('bookings', JSON.stringify(bookings));
                 generateCalendar();
             }
         };
@@ -230,6 +231,8 @@
         function toggleBooking(slotKey, slotElement, hour) {
             if (bookings[slotKey]) {
                 ws.send(JSON.stringify({ slotKey, action: 'remove' }));
+                delete bookings[slotKey];
+                localStorage.setItem('bookings', JSON.stringify(bookings));
                 slotElement.style.background = "#dfe6e9";
                 slotElement.textContent = hour;
             } else {
@@ -250,6 +253,8 @@
                 select.addEventListener("change", () => {
                     let agent = select.value;
                     ws.send(JSON.stringify({ slotKey, agent, color: agents[agent], action: 'add' }));
+                    bookings[slotKey] = { agent, color: agents[agent] };
+                    localStorage.setItem('bookings', JSON.stringify(bookings));
                     slotElement.style.background = agents[agent];
                     slotElement.innerHTML = `${hour} <span class="agent-name">(${agent})</span>`;
                     slotElement.classList.add("occupied");
