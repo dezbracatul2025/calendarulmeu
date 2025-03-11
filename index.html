@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar Agenți</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            text-align: center;
+            background: linear-gradient(135deg, #f0f4f8, #d9e2ec);
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .calendar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .week {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr); /* 5 zile lucrătoare pe săptămână */
+            gap: 15px;
+        }
+
+        .day {
+            border: 1px solid #dfe6e9;
+            padding: 15px;
+            background: #f9fbfc;
+            border-radius: 10px;
+            transition: transform 0.2s ease, box-shadow 0.3s ease;
+        }
+
+        .day:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        .day strong {
+            display: block;
+            margin-bottom: 5px;
+            color: #2d3436;
+            font-size: 1.1em;
+        }
+
+        .day .weekday {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+        }
+
+        .time-slot {
+            margin: 5px 0;
+            padding: 8px;
+            border: 1px solid #b2bec3;
+            border-radius: 5px;
+            background: #dfe6e9;
+            cursor: pointer;
+            transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+            font-size: 0.95em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .time-slot:hover {
+            transform: scale(1.02);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .occupied {
+            color: white;
+            font-weight: bold;
+        }
+
+        .occupied span.agent-name {
+            font-size: 0.85em;
+            margin-left: 5px;
+        }
+
+        select {
+            width: 100%;
+            padding: 5px;
+            border-radius: 5px;
+            border: 1px solid #b2bec3;
+            background: #ffffff;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: border-color 0.3s ease;
+        }
+
+        select:focus {
+            border-color: #0984e3;
+            outline: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Calendar Agenți</h1>
+    <div id="calendar" class="calendar"></div>
+    
+    <script>
+        const agents = {
+            "Claudiu": "#ff5733",
+            "Andreea": "#33ff57",
+            "Valentina": "#3357ff",
+            "Cosmina": "#f4d03f",
+            "Monica": "#9b59b6"
+        };
+        const hours = ["10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00"];
+        const calendarDiv = document.getElementById("calendar");
+        let bookings = JSON.parse(localStorage.getItem("bookings")) || {};
+        let today = new Date();
+
+        function formatDate(date) {
+            return `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
+        }
+
+        function getWeekdayName(date) {
+            const weekdays = ["Duminică", "Luni", "Marți", "Miercuri", "Joi", "Vineri", "Sâmbătă"];
+            return weekdays[date.getDay()];
+        }
+
+        function isWeekend(date) {
+            return date.getDay() === 0 || date.getDay() === 6;
+        }
+
+        function generateWeek(startDate) {
+            let week = [];
+            for (let i = 0; i < 5; i++) { // Doar 5 zile lucrătoare (luni-vineri)
+                let date = new Date(startDate);
+                date.setDate(startDate.getDate() + i);
+                if (!isWeekend(date)) {
+                    week.push(date);
+                }
+            }
+            return week;
+        }
+
+        function generateCalendar() {
+            calendarDiv.innerHTML = "";
+            let startDate = new Date(today);
+            // Ajustăm startDate pentru a începe de la prima zi lucrătoare a săptămânii curente
+            while (isWeekend(startDate) || startDate.getDay() === 0) {
+                startDate.setDate(startDate.getDate() + 1);
+            }
+            let weeks = [];
+            for (let i = 0; i < 4; i++) { // 4 săptămâni
+                let weekStart = new Date(startDate);
+                weekStart.setDate(startDate.getDate() + i * 7);
+                weeks.push(...generateWeek(weekStart));
+            }
+
+            // Verificăm dacă prima săptămână a fost depășită
+            let firstWeekLastDay = new Date(weeks[0]);
+            firstWeekLastDay.setDate(firstWeekLastDay.getDate() + 4); // Ultima zi a primei săptămâni (vineri)
+            if (today > firstWeekLastDay) {
+                // Eliminăm prima săptămână și adăugăm o nouă săptămână
+                weeks = weeks.slice(weeks.length - 15); // Păstrăm ultimele 3 săptămâni (15 zile lucrătoare)
+                let newWeekStart = new Date(weeks[weeks.length - 1]);
+                newWeekStart.setDate(newWeekStart.getDate() + 1);
+                while (isWeekend(newWeekStart)) {
+                    newWeekStart.setDate(newWeekStart.getDate() + 1);
+                }
+                weeks.push(...generateWeek(newWeekStart));
+                // Curățăm rezervările pentru săptămânile care nu mai sunt relevante
+                Object.keys(bookings).forEach(key => {
+                    let [date] = key.split('-');
+                    let bookingDate = new Date(date.split('-').reverse().join('-'));
+                    if (bookingDate < weeks[0]) {
+                        delete bookings[key];
+                    }
+                });
+                localStorage.setItem("bookings", JSON.stringify(bookings));
+            }
+
+            // Grupăm zilele pe săptămâni
+            for (let i = 0; i < weeks.length; i += 5) {
+                let week = weeks.slice(i, i + 5);
+                if (week.length > 0) {
+                    let weekDiv = document.createElement("div");
+                    weekDiv.classList.add("week");
+                    week.forEach(date => {
+                        let dayKey = formatDate(date);
+                        let weekdayName = getWeekdayName(date);
+                        let dayDiv = document.createElement("div");
+                        dayDiv.classList.add("day");
+                        dayDiv.innerHTML = `<span class="weekday">${weekdayName}</span><strong>${dayKey}</strong><br>`;
+                        
+                        hours.forEach(hour => {
+                            let slotKey = `${dayKey}-${hour}`;
+                            let slot = document.createElement("div");
+                            slot.classList.add("time-slot");
+                            
+                            if (bookings[slotKey]) {
+                                let { agent, color } = bookings[slotKey];
+                                slot.style.background = color;
+                                slot.innerHTML = `${hour} <span class="agent-name">(${agent})</span>`;
+                                slot.classList.add("occupied");
+                            } else {
+                                slot.textContent = hour;
+                            }
+                            
+                            slot.addEventListener("click", () => toggleBooking(slotKey, slot, hour));
+                            dayDiv.appendChild(slot);
+                        });
+                        weekDiv.appendChild(dayDiv);
+                    });
+                    calendarDiv.appendChild(weekDiv);
+                }
+            }
+        }
+
+        function toggleBooking(slotKey, slotElement, hour) {
+            if (bookings[slotKey]) {
+                delete bookings[slotKey];
+                slotElement.style.background = "#dfe6e9";
+                slotElement.textContent = hour;
+            } else {
+                let select = document.createElement("select");
+                let defaultOption = document.createElement("option");
+                defaultOption.value = "";
+                defaultOption.textContent = "Alege agent";
+                defaultOption.selected = true;
+                defaultOption.disabled = true;
+                select.appendChild(defaultOption);
+                
+                Object.keys(agents).forEach(agent => {
+                    let option = document.createElement("option");
+                    option.value = agent;
+                    option.textContent = agent;
+                    select.appendChild(option);
+                });
+                select.addEventListener("change", () => {
+                    let agent = select.value;
+                    bookings[slotKey] = { agent, color: agents[agent] };
+                    slotElement.style.background = agents[agent];
+                    slotElement.innerHTML = `${hour} <span class="agent-name">(${agent})</span>`;
+                    slotElement.classList.add("occupied");
+                    localStorage.setItem("bookings", JSON.stringify(bookings));
+                });
+                slotElement.innerHTML = "";
+                slotElement.appendChild(select);
+            }
+            localStorage.setItem("bookings", JSON.stringify(bookings));
+        }
+
+        // Actualizare automată la încărcarea paginii
+        window.onload = generateCalendar;
+        // Opțional: Actualizare la fiecare 24 de ore (pentru testare manuală, poți comenta asta)
+        // setInterval(generateCalendar, 24 * 60 * 60 * 1000);
+    </script>
+</body>
+</html>
