@@ -43,6 +43,7 @@
             grid-template-columns: repeat(5, 1fr);
             gap: 15px;
             margin-bottom: 15px;
+            position: relative;
         }
 
         .day {
@@ -105,18 +106,18 @@
             margin-left: 5px;
         }
 
-        select {
+        select, input {
             width: 100%;
-            padding: 5px;
+            padding: 10px;
+            margin-bottom: 10px;
             border-radius: 5px;
             border: 1px solid #b2bec3;
             background: #ffffff;
             font-size: 0.9em;
-            cursor: pointer;
             transition: border-color 0.3s ease;
         }
 
-        select:focus {
+        select:focus, input:focus {
             border-color: #0984e3;
             outline: none;
         }
@@ -136,46 +137,65 @@
             color: #2c3e50;
         }
 
-        /* Stil pentru butoane de login */
+        /* Stil pentru interfața de login */
         .login-container {
             max-width: 400px;
             margin: 0 auto 20px auto;
-            padding: 15px;
+            padding: 20px;
             background: #ffffff;
             border-radius: 10px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
 
-        .login-buttons {
+        .login-form {
             display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
+            flex-direction: column;
             gap: 10px;
-            margin-top: 10px;
         }
 
-        .agent-button {
-            padding: 8px 16px;
+        .login-button {
+            padding: 10px;
+            background-color: #2980b9;
+            color: white;
             border: none;
             border-radius: 5px;
-            font-size: 1em;
-            font-weight: 500;
             cursor: pointer;
-            transition: transform 0.2s ease, opacity 0.3s ease;
+            font-weight: 500;
+            transition: background-color 0.3s ease;
         }
 
-        .agent-button:hover {
-            transform: translateY(-2px);
-            opacity: 0.9;
+        .login-button:hover {
+            background-color: #3498db;
         }
 
-        .logged-in-status {
+        .logout-button {
+            padding: 8px 16px;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
             margin-top: 10px;
-            font-size: 1em;
+            transition: background-color 0.3s ease;
+        }
+
+        .logout-button:hover {
+            background-color: #c0392b;
+        }
+
+        .login-status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
             font-weight: 500;
         }
 
         /* Stil pentru marker de editare permisă */
+        .editable {
+            position: relative;
+        }
+
         .editable::after {
             content: "✏️";
             position: absolute;
@@ -186,10 +206,6 @@
         }
 
         /* Stil pentru săptămâna curentă */
-        .current-week {
-            position: relative;
-        }
-
         .current-week::before {
             content: "Săptămâna curentă";
             position: absolute;
@@ -201,17 +217,44 @@
             font-weight: bold;
             color: #2c3e50;
         }
+
+        /* Stil pentru eroare login */
+        .login-error {
+            color: #e74c3c;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        /* Stil pentru succesul login-ului */
+        .login-success {
+            background-color: #dff0d8;
+            color: #3c763d;
+            border: 1px solid #d6e9c6;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
     <h1>Calendar Agenți</h1>
     
     <!-- Container pentru login -->
-    <div class="login-container">
-        <div id="loginStatus" class="logged-in-status">Nu ești conectat</div>
-        <div class="login-buttons" id="loginButtons">
-            <!-- Butoanele de login vor fi adăugate aici prin JavaScript -->
+    <div class="login-container" id="loginContainer">
+        <h3>Autentificare agent</h3>
+        <div class="login-form">
+            <select id="agentSelect">
+                <option value="">Selectează agent</option>
+                <!-- Opțiunile pentru agenți vor fi adăugate prin JavaScript -->
+            </select>
+            <input type="password" id="agentPassword" placeholder="Parolă" />
+            <button id="loginButton" class="login-button">Conectare</button>
+            <div id="loginError" class="login-error" style="display: none;">Parolă incorectă. Încearcă din nou.</div>
         </div>
+        <div id="loginStatus" class="login-status" style="display: none;">
+            Nu ești conectat
+        </div>
+        <button id="logoutButton" class="logout-button" style="display: none;">Deconectare</button>
     </div>
     
     <div class="date-display" id="dateDisplay"></div>
@@ -236,53 +279,150 @@
         const database = firebase.database();
         const bookingsRef = database.ref('bookings');
 
+        // Informații despre agenți (include parole)
         const agents = {
-            "Claudiu": "#ff5733",
-            "Andreea": "#33ff57",
-            "Valentina": "#3357ff",
-            "Cosmina": "#f4d03f",
-            "Monica": "#9b59b6"
+            "Claudiu": {
+                color: "#ff5733",
+                password: "MOTIVATIE"
+            },
+            "Andreea": {
+                color: "#33ff57",
+                password: "parolaAndreea"
+            },
+            "Valentina": {
+                color: "#3357ff",
+                password: "parolaValentina"
+            },
+            "Cosmina": {
+                color: "#f4d03f",
+                password: "parolaCosmina"
+            },
+            "Monica": {
+                color: "#9b59b6",
+                password: "parolaMonica"
+            }
         };
         
         const hours = ["10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00"];
         const calendarDiv = document.getElementById("calendar");
         const dateDisplayDiv = document.getElementById("dateDisplay");
         const loginStatusDiv = document.getElementById("loginStatus");
-        const loginButtonsDiv = document.getElementById("loginButtons");
+        const agentSelectElement = document.getElementById("agentSelect");
+        const agentPasswordElement = document.getElementById("agentPassword");
+        const loginButtonElement = document.getElementById("loginButton");
+        const logoutButtonElement = document.getElementById("logoutButton");
+        const loginErrorElement = document.getElementById("loginError");
         
         let bookings = {};
         let currentAgent = null; // Agent curent conectat
         
-        // Creează butoanele de login pentru agenți
-        function createLoginButtons() {
-            // Creează butoane pentru fiecare agent
-            Object.keys(agents).forEach(agent => {
-                const button = document.createElement("button");
-                button.textContent = agent;
-                button.classList.add("agent-button");
-                button.style.backgroundColor = agents[agent];
-                button.style.color = getContrastColor(agents[agent]);
-                
-                button.addEventListener("click", () => {
-                    login(agent);
-                });
-                
-                loginButtonsDiv.appendChild(button);
+        // Populează selectul cu agenți
+        function populateAgentSelect() {
+            // Golește dropdown-ul
+            while (agentSelectElement.options.length > 1) {
+                agentSelectElement.remove(1);
+            }
+            
+            // Adaugă opțiuni pentru fiecare agent
+            Object.keys(agents).forEach(agentName => {
+                const option = document.createElement("option");
+                option.value = agentName;
+                option.textContent = agentName;
+                agentSelectElement.appendChild(option);
             });
+        }
+        
+        // Funcție pentru login
+        function login(agent, password) {
+            // Verifică dacă agentul există
+            if (!agents[agent]) {
+                showLoginError("Agent invalid. Selectează un agent din lista.");
+                return false;
+            }
             
-            // Adaugă buton de logout
-            const logoutButton = document.createElement("button");
-            logoutButton.textContent = "Deconectare";
-            logoutButton.classList.add("agent-button");
-            logoutButton.style.backgroundColor = "#e74c3c";
-            logoutButton.style.color = "#ffffff";
-            logoutButton.style.display = "none"; // Ascunde inițial
+            // Verifică parola
+            if (agents[agent].password !== password) {
+                showLoginError("Parolă incorectă. Încearcă din nou.");
+                return false;
+            }
             
-            logoutButton.addEventListener("click", () => {
-                logout();
-            });
+            // Login reușit
+            currentAgent = agent;
             
-            loginButtonsDiv.appendChild(logoutButton);
+            // Actualizează interfața
+            loginStatusDiv.textContent = `Conectat ca: ${agent}`;
+            loginStatusDiv.style.backgroundColor = agents[agent].color;
+            loginStatusDiv.style.color = getContrastColor(agents[agent].color);
+            loginStatusDiv.style.display = "block";
+            
+            // Ascunde formularul și arată butonul de logout
+            document.querySelector(".login-form").style.display = "none";
+            logoutButtonElement.style.display = "block";
+            
+            // Ascunde mesajul de eroare
+            hideLoginError();
+            
+            // Salvează starea de login în localStorage
+            localStorage.setItem('currentAgent', agent);
+            localStorage.setItem('lastLoginTime', new Date().getTime());
+            
+            // Actualizează afișarea calendarului cu permisiunile
+            updateCalendarWithPermissions();
+            
+            return true;
+        }
+        
+        // Funcție de logout
+        function logout() {
+            currentAgent = null;
+            
+            // Actualizează interfața
+            loginStatusDiv.style.display = "none";
+            document.querySelector(".login-form").style.display = "block";
+            logoutButtonElement.style.display = "none";
+            
+            // Resetează câmpurile formularului
+            agentSelectElement.value = "";
+            agentPasswordElement.value = "";
+            
+            // Șterge starea de login din localStorage
+            localStorage.removeItem('currentAgent');
+            localStorage.removeItem('lastLoginTime');
+            
+            // Actualizează afișarea calendarului
+            updateCalendarWithPermissions();
+        }
+        
+        // Afișează mesajul de eroare la login
+        function showLoginError(message) {
+            loginErrorElement.textContent = message;
+            loginErrorElement.style.display = "block";
+        }
+        
+        // Ascunde mesajul de eroare la login
+        function hideLoginError() {
+            loginErrorElement.style.display = "none";
+        }
+        
+        // Verifică dacă există o stare de login salvată și dacă nu a expirat
+        function checkSavedLogin() {
+            const savedAgent = localStorage.getItem('currentAgent');
+            const lastLoginTime = localStorage.getItem('lastLoginTime');
+            
+            if (savedAgent && agents[savedAgent]) {
+                // Verifică dacă sesiunea nu a expirat (24 ore)
+                const now = new Date().getTime();
+                const loginTimeLimit = 24 * 60 * 60 * 1000; // 24 ore în milisecunde
+                
+                if (lastLoginTime && (now - lastLoginTime) < loginTimeLimit) {
+                    // Auto-login dacă sesiunea nu a expirat
+                    login(savedAgent, agents[savedAgent].password);
+                } else {
+                    // Sesiunea a expirat, șterge din localStorage
+                    localStorage.removeItem('currentAgent');
+                    localStorage.removeItem('lastLoginTime');
+                }
+            }
         }
         
         // Funcție pentru calcularea contrastului textului (alb sau negru) bazat pe culoarea de fundal
@@ -297,58 +437,6 @@
             
             // Returnează alb sau negru în funcție de luminozitate
             return luminance > 0.5 ? '#000000' : '#ffffff';
-        }
-        
-        // Funcție de login
-        function login(agent) {
-            currentAgent = agent;
-            loginStatusDiv.textContent = `Conectat ca: ${agent}`;
-            loginStatusDiv.style.color = agents[agent];
-            
-            // Ascunde butoanele de login și arată butonul de logout
-            Array.from(loginButtonsDiv.children).forEach(button => {
-                if (button.textContent === "Deconectare") {
-                    button.style.display = "block";
-                } else {
-                    button.style.display = "none";
-                }
-            });
-            
-            // Salvează starea de login în localStorage
-            localStorage.setItem('currentAgent', agent);
-            
-            // Actualizează afișarea calendarului
-            updateCalendarWithPermissions();
-        }
-        
-        // Funcție de logout
-        function logout() {
-            currentAgent = null;
-            loginStatusDiv.textContent = "Nu ești conectat";
-            loginStatusDiv.style.color = "";
-            
-            // Arată butoanele de login și ascunde butonul de logout
-            Array.from(loginButtonsDiv.children).forEach(button => {
-                if (button.textContent === "Deconectare") {
-                    button.style.display = "none";
-                } else {
-                    button.style.display = "inline-block";
-                }
-            });
-            
-            // Șterge starea de login din localStorage
-            localStorage.removeItem('currentAgent');
-            
-            // Actualizează afișarea calendarului
-            updateCalendarWithPermissions();
-        }
-        
-        // Verifică dacă există o stare de login salvată
-        function checkSavedLogin() {
-            const savedAgent = localStorage.getItem('currentAgent');
-            if (savedAgent && agents[savedAgent]) {
-                login(savedAgent);
-            }
         }
         
         // Actualizează afișarea calendarului cu permisiunile corecte
@@ -406,6 +494,15 @@
             return date >= startOfWeek && date <= endOfWeek;
         }
         
+        // Verifică dacă săptămâna este în trecut
+        function isPastWeek(weekStartDate) {
+            const today = getCurrentDate();
+            const endOfWeek = new Date(weekStartDate);
+            endOfWeek.setDate(weekStartDate.getDate() + 6);
+            
+            return endOfWeek < today;
+        }
+        
         // Obține prima zi (luni) a săptămânii pentru o dată
         function getStartOfWeek(date) {
             const startOfWeek = new Date(date);
@@ -444,7 +541,7 @@
             }
         }
 
-        // Generează calendarul complet pentru 3 săptămâni
+        // Generează calendarul complet pentru 4 săptămâni (curentă + următoarele 3)
         function generateCalendar() {
             calendarDiv.innerHTML = "<div class='loading'>Se încarcă calendarul...</div>";
             const today = getCurrentDate();
@@ -452,12 +549,16 @@
             // Obține data primei zile (luni) a săptămânii curente
             const currentWeekStart = getStartOfWeek(today);
             
-            // Generăm exact 3 săptămâni: curentă + următoarele 2
+            // Generăm exact 4 săptămâni: curentă + următoarele 3
             let weeks = [];
-            for (let i = 0; i < 3; i++) {
+            for (let i = 0; i < 4; i++) {
                 const weekStart = new Date(currentWeekStart);
                 weekStart.setDate(currentWeekStart.getDate() + i * 7);
-                weeks.push(generateWeekDays(weekStart));
+                
+                // Verifică dacă săptămâna nu este în trecut
+                if (!isPastWeek(weekStart)) {
+                    weeks.push(generateWeekDays(weekStart));
+                }
             }
 
             // Actualizează afișarea intervalului de date
@@ -509,24 +610,16 @@
                             slot.setAttribute("data-slot", slotKey);
                             
                             if (bookings[slotKey]) {
-                                const { agent, color } = bookings[slotKey];
-                                slot.style.background = color;
-                                slot.innerHTML = `${hour} <span class="agent-name">(${agent})</span>`;
+                                const booking = bookings[slotKey];
+                                slot.style.background = booking.color || agents[booking.agent].color;
+                                slot.innerHTML = `${hour} <span class="agent-name">(${booking.agent})</span>`;
                                 slot.classList.add("occupied");
                             } else {
                                 slot.textContent = hour;
                             }
                             
                             slot.addEventListener("click", () => {
-                                // Verifică dacă agentul are permisiunea de a modifica acest slot
-                                if (currentAgent && 
-                                    (!bookings[slotKey] || bookings[slotKey].agent === currentAgent)) {
-                                    toggleBooking(slotKey, slot, hour);
-                                } else if (!currentAgent) {
-                                    alert("Trebuie să te conectezi mai întâi!");
-                                } else {
-                                    alert("Nu poți modifica rezervările altor agenți!");
-                                }
+                                handleSlotClick(slotKey, slot, hour);
                             });
                             
                             dayDiv.appendChild(slot);
@@ -538,6 +631,25 @@
                     calendarDiv.appendChild(weekDiv);
                 }
             });
+        }
+
+        // Gestionează click-ul pe un slot de timp
+        function handleSlotClick(slotKey, slotElement, hour) {
+            // Verifică dacă utilizatorul e autentificat
+            if (!currentAgent) {
+                alert("Trebuie să te conectezi mai întâi pentru a face rezervări!");
+                return;
+            }
+            
+            // Verifică permisiunile
+            const booking = bookings[slotKey];
+            if (booking && booking.agent !== currentAgent) {
+                alert("Nu poți modifica rezervările altor agenți!");
+                return;
+            }
+            
+            // Rezervă sau eliberează slotul
+            toggleBooking(slotKey, slotElement, hour);
         }
 
         // Gestionează rezervarea/eliberarea unui slot
@@ -556,17 +668,18 @@
                         alert("Eroare la ștergerea rezervării. Încearcă din nou.");
                     });
             } else {
-                // Creează direct rezervarea pentru agentul curent
+                // Creează rezervarea pentru agentul curent
                 const booking = { 
                     agent: currentAgent, 
-                    color: agents[currentAgent] 
+                    color: agents[currentAgent].color,
+                    timestamp: firebase.database.ServerValue.TIMESTAMP // Adăugăm timestamp pentru a putea sorta după data creării
                 };
                 
                 // Salvează rezervarea în Firebase
                 bookingsRef.child(slotKey).set(booking)
                     .then(() => {
                         bookings[slotKey] = booking;
-                        slotElement.style.background = agents[currentAgent];
+                        slotElement.style.background = agents[currentAgent].color;
                         slotElement.innerHTML = `${hour} <span class="agent-name">(${currentAgent})</span>`;
                         slotElement.classList.add("occupied");
                     })
@@ -577,50 +690,59 @@
             }
         }
 
-        // Ascultă schimbările în timp real pentru rezervări
-        bookingsRef.on('value', (snapshot) => {
-            const updatedBookings = snapshot.val() || {};
-            
-            // Actualizează rezervările în interfață
-            Object.keys(updatedBookings).forEach(slotKey => {
-                const slot = document.querySelector(`[data-slot="${slotKey}"]`);
-                if (slot) {
-                    const hour = slotKey.split('-')[2];
-                    const { agent, color } = updatedBookings[slotKey];
-                    
-                    // Actualizează doar dacă s-a schimbat ceva
-                    if (!bookings[slotKey] || 
-                        bookings[slotKey].agent !== agent || 
-                        bookings[slotKey].color !== color) {
-                        
-                        slot.style.background = color;
-                        slot.innerHTML = `${hour} <span class="agent-name">(${agent})</span>`;
-                        slot.classList.add("occupied");
-                    }
-                }
-            });
-            
-            // Verifică dacă vreo rezervare a fost ștearsă
-            Object.keys(bookings).forEach(slotKey => {
-                if (!updatedBookings[slotKey]) {
-                    const slot = document.querySelector(`[data-slot="${slotKey}"]`);
-                    if (slot) {
-                        const hour = slotKey.split('-')[2];
-                        slot.style.background = "#dfe6e9";
-                        slot.textContent = hour;
-                        slot.classList.remove("occupied");
-                    }
-                }
-            });
-            
-            // Actualizează starea locală a rezervărilor
-            bookings = {...updatedBookings};
-            
-            // Actualizează permisiunile
-            if (currentAgent) {
-                updateCalendarWithPermissions();
+        // Actualizează un slot specific în interfață
+        function updateSlotDisplay(slotKey) {
+            const slot = document.querySelector(`[data-slot="${slotKey}"]`);
+            if (slot && bookings[slotKey]) {
+                const hour = slotKey.split('-')[2];
+                const booking = bookings[slotKey];
+                
+                slot.style.background = booking.color || agents[booking.agent].color;
+                slot.innerHTML = `${hour} <span class="agent-name">(${booking.agent})</span>`;
+                slot.classList.add("occupied");
             }
-        });
+        }
+
+        // Resetează un slot la starea liberă
+        function resetSlot(slot, slotKey) {
+            const hour = slotKey.split('-')[2];
+            
+            slot.style.background = "#dfe6e9";
+            slot.textContent = hour;
+            slot.classList.remove("occupied");
+        }
+
+        // Actualizează toate slot-urile din interfață
+        function updateAllSlots() {
+            // Resetează toate slot-urile vizibile
+            document.querySelectorAll('.time-slot').forEach(slot => {
+                const slotKey = slot.getAttribute('data-slot');
+                if (!bookings[slotKey]) {
+                    resetSlot(slot, slotKey);
+                } else {
+                    updateSlotDisplay(slotKey);
+                }
+            });
+        }
+
+        // Configurează ascultătorii pentru Firebase
+        function setupRealtimeListeners() {
+            // Ascultă schimbările în timp real pentru rezervări
+            bookingsRef.on('value', (snapshot) => {
+                const updatedBookings = snapshot.val() || {};
+                
+                // Actualizează starea locală a rezervărilor
+                bookings = {...updatedBookings};
+                
+                // Actualizează toate slot-urile vizibile
+                updateAllSlots();
+                
+                // Actualizează permisiunile
+                if (currentAgent) {
+                    updateCalendarWithPermissions();
+                }
+            });
+        }
 
         // Verifică zilnic (la miezul nopții) dacă trebuie actualizat calendarul
         function scheduleMidnightUpdate() {
@@ -639,13 +761,57 @@
             }, msToMidnight);
         }
 
+        // Adăugare event listeners pentru login/logout
+        function setupEventListeners() {
+            // Event listener pentru butonul de login
+            loginButtonElement.addEventListener('click', () => {
+                const selectedAgent = agentSelectElement.value;
+                const password = agentPasswordElement.value;
+                
+                if (!selectedAgent) {
+                    showLoginError("Selectează un agent din listă!");
+                    return;
+                }
+                
+                if (!password) {
+                    showLoginError("Introdu parola!");
+                    return;
+                }
+                
+                login(selectedAgent, password);
+            });
+            
+            // Event listener pentru butonul de logout
+            logoutButtonElement.addEventListener('click', () => {
+                logout();
+            });
+            
+            // Event listener pentru câmpul de parolă (apasă Enter pentru login)
+            agentPasswordElement.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    loginButtonElement.click();
+                }
+            });
+            
+            // Ascunde mesajul de eroare când se schimbă selecția agentului
+            agentSelectElement.addEventListener('change', () => {
+                hideLoginError();
+            });
+        }
+
         // La încărcarea paginii
         window.onload = () => {
-            // Creează butoanele de login
-            createLoginButtons();
+            // Populează dropdown-ul cu agenți
+            populateAgentSelect();
+            
+            // Configurează event listeners
+            setupEventListeners();
             
             // Verifică dacă există un login salvat
             checkSavedLogin();
+            
+            // Configurează ascultătorii în timp real pentru Firebase
+            setupRealtimeListeners();
             
             // Generează calendarul
             generateCalendar();
