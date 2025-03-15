@@ -265,15 +265,16 @@
     <script>
         // Configurare Firebase - trebuie înlocuite cu datele dvs. de la Firebase
         const firebaseConfig = {
-            apiKey: "AIzaSyAkpKUytMx3cFHb36pJeNCpcaAEcUWWoDw",
-            authDomain: "calendarul-meu-14fbd.firebaseapp.com",
-            databaseURL: "https://calendarul-meu-14fbd-default-rtdb.firebaseio.com/",
-            projectId: "calendarul-meu-14fbd",
-            storageBucket: "calendarul-meu-14fbd.firebasestorage.app",
-            messagingSenderId: "186913418152",
-            appId: "1:186913418152:web:9e778cb3ac01c880414b9d"
-            measurementId: "G-Z7JXN60HDX"
-        };
+    apiKey: "AIzaSyAkpKUytMx3cFHb36pJeNCpcaAEcUWWoDw",
+    authDomain: "calendarul-meu-14fbd.firebaseapp.com",
+    databaseURL: "https://calendarul-meu-14fbd-default-rtdb.firebaseio.com/",
+    projectId: "calendarul-meu-14fbd",
+    storageBucket: "calendarul-meu-14fbd.appspot.com", // ✅ Domeniul corect
+    messagingSenderId: "186913418152",
+    appId: "1:186913418152:web:9e778cb3ac01c880414b9d",
+    measurementId: "G-Z7JXN60HDX"
+};
+
         
         // Inițializare Firebase
         firebase.initializeApp(firebaseConfig);
